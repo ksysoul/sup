@@ -622,33 +622,61 @@ document.addEventListener('change', function(e) {
     if(e.target.classList.contains('assign-select')) {
         const teacherId = e.target.value;
         
-        // 1. '--- [전체 명단] ---'을 선택한 경우: 전체 교사 목록을 드롭다운에 채워줌
+        // 1. '--- [전체 명단] ---'을 선택한 경우: 학년/직책별로 그룹화하여 목록 생성
         if (teacherId === 'ALL') {
             const sel = e.target;
             sel.innerHTML = '<option value="">-- 교사 선택 --</option>';
             
-            appData.teachers
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .forEach(t => {
-                    const roleLabel = t.role === '일반' ? `${t.grade}-${t.class}` : t.role;
-                    const optText = `[${roleLabel}] ${t.name} (누적: ${t.regCount + t.lunchCount}회)`;
-                    sel.add(new Option(optText, t.id));
-                });
-            return; // 전체 명단 목록을 띄운 후에는 아래 카운트 로직을 타지 않고 종료
+            // 학년/직책 순서 정의 (1~6학년 담임 먼저, 그 후 전담 및 기타 직책)
+            const gradeOrder = ['1', '2', '3', '4', '5', '6', '전담', '보건', '영양', '사서', '행정', '임시', '기타'];
+            
+            // 그룹별로 교사 분류
+            const grouped = {};
+            appData.teachers.forEach(t => {
+                let key = t.grade;
+                if (!gradeOrder.includes(key)) key = '기타';
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(t);
+            });
+            
+            // 각 그룹 내부를 이름순(가나다순)으로 정렬
+            Object.keys(grouped).forEach(key => {
+                grouped[key].sort((a, b) => a.name.localeCompare(b.name));
+            });
+            
+            // 정렬된 순서대로 드롭다운에 그룹별 옵션 추가
+            gradeOrder.forEach(gKey => {
+                if (grouped[gKey] && grouped[gKey].length > 0) {
+                    // 구분선 역할을 하는 비활성화 옵션 추가
+                    const groupLabel = !isNaN(gKey) ? `--- [ ${gKey}학년 ] ---` : `--- [ ${gKey} ] ---`;
+                    const dividerOpt = new Option(groupLabel, '');
+                    dividerOpt.disabled = true;
+                    sel.add(dividerOpt);
+                    
+                    // 해당 그룹의 교사들 추가
+                    grouped[gKey].forEach(t => {
+                        const roleLabel = t.role === '일반' ? `${t.grade}-${t.class}반` : t.role;
+                        const optText = `&nbsp;&nbsp;&nbsp;${t.name} (${roleLabel}, 누적: ${t.regCount + t.lunchCount}회)`;
+                        
+                        // option 객체 생성 후 텍스트 밀어쓰기 적용
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.innerHTML = optText; // 들여쓰기 가독성을 위해 innerHTML 활용
+                        sel.add(opt);
+                    });
+                }
+            });
+            return;
         }
 
         // 2. 실제 선생님을 선택한 경우: 카운트 증가 및 데이터 동기화 수행
         if(teacherId && teacherId !== '') {
             const isLunch = e.target.id.includes('점심');
-            
-            // 기존의 오타(teadcherId -> teacherId)를 바로잡아 정상 동작하도록 수정
             incrementCount(teacherId, isLunch);
             syncCurrentData();
         }
     }
 });
-
 
 
 function openTeacherModal(selectElement){ currentModalTarget=selectElement; const listEl=document.getElementById('modal-teacher-list'); listEl.innerHTML=''; appData.teachers.sort((a,b)=>a.name.localeCompare(b.name)).forEach(t=>{ listEl.innerHTML+=`<div class="modal-item" onclick="selectTeacherFromModal('${t.id}')">[${t.role==='일반'?t.grade+'-'+t.class:t.role}] ${t.name} (누적${t.regCount+t.lunchCount})</div>`; }); document.getElementById('teacher-list-modal').style.display='block'; }
