@@ -105,7 +105,7 @@ button.del-btn{background:var(--highlight)}
 .del-temp-btn{color:red;cursor:pointer;font-weight:bold;margin-left:5px}
 
 </style>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -189,7 +189,14 @@ button.del-btn{background:var(--highlight)}
 
 <div id="timetable-area" style="display:none">
 
-<div class="toolbar"><h3 id="selected-class-title" style="margin:0"></h3><button class="action-btn" onclick="runAutoAssign()">✨ 일괄 배정</button></div>
+<div class="toolbar">
+    <h3 id="selected-class-title" style="margin:0"></h3>
+    <div>
+        <button class="action-btn" style="background:#27ae60; margin-right:5px;" onclick="exportCurrentClassImage()">🖼️ 이미지 저장</button>
+        <button class="action-btn" onclick="runAutoAssign()">✨ 일괄 배정</button>
+    </div>
+</div>
+3단계: 자바스크
 
 <table><thead><tr><th>교시</th><th>시간</th><th>배정 선생님</th></tr></thead><tbody id="timetable-body"></tbody></table>
 
@@ -744,7 +751,25 @@ function exportCSV(){
                 body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; color: #333; }
                 h2 { text-align: center; color: #2C3E50; margin-bottom: 5px; }
                 .sub-title { text-align: center; font-size: 14px; color: #666; margin-bottom: 30px; }
-                .class-box { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #fafafa; }
+                
+                /* 각 학급 박스가 한 화면(페이지)을 온전히 차지하도록 설정 */
+                .class-box { 
+                    margin-bottom: 30px; 
+                    border: 1px solid #ddd; 
+                    padding: 15px; 
+                    border-radius: 5px; 
+                    background: #fafafa; 
+                    /* 핵심: 첫 번째 학급을 제외하고는 무조건 다음 페이지(화면)에서 시작하도록 설정 */
+                    page-break-before: always; 
+                    break-before: page;
+                }
+                
+                /* 첫 번째 학급은 첫 페이지 상단에 바로 오도록 예외 처리 */
+                .class-box:first-of-type {
+                    page-break-before: avoid;
+                    break-before: avoid;
+                }
+
                 .class-header { font-size: 16px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; border-bottom: 2px solid #3498DB; padding-bottom: 5px; }
                 table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; }
                 th, td { border: 1px solid #BDC3C7; padding: 8px 12px; font-size: 13px; text-align: center; }
@@ -868,7 +893,25 @@ function exportCSV(){
     link.download = `결보강현황_${targetDayStr}요일.doc`;
     link.click();
 }
-
+function exportCurrentClassImage() {
+    if(!currentGrade || !currentClass) {
+        return alert("먼저 배정 탭에서 학급을 선택해 주세요.");
+    }
+    
+    // 현재 입력된 데이터 동기화
+    syncCurrentData();
+    
+    // 캡처할 대상 영역 (선택된 학급의 시간표 영역)
+    const targetArea = document.getElementById('timetable-area');
+    
+    // 선명하게(고해상도) 캡처하기 위해 scale 옵션 부여
+    html2canvas(targetArea, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `결보강_${currentGrade}학년_${currentClass}반_${targetDayStr}요일.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
 </script>
 
 </body>
