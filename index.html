@@ -860,11 +860,10 @@ function exportCSV(){
     async function exportHWPImageNotice() {
     syncCurrentData();
 
-    // 임시로 캡처용 렌더링 영역 생성
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
     tempContainer.style.left = '-9999px';
-    tempContainer.style.width = '700px'; // A4 가로폭에 최적화
+    tempContainer.style.width = '700px';
     document.body.appendChild(tempContainer);
 
     let classCounts = {};
@@ -920,7 +919,6 @@ function exportCSV(){
                     `;
                 });
 
-                // HTML 요소를 만들어 임시 컨테이너에 삽입
                 tempContainer.innerHTML = `
                     <div style="background: white; padding: 25px; border: 1px solid #ddd; font-family: 'Malgun Gothic', sans-serif;">
                         <h2 style="text-align: center; color: #2C3E50; margin-bottom: 5px; font-size: 22px;">[${targetDayStr}요일] 학급별 결보강 배정 현황 안내</h2>
@@ -945,19 +943,23 @@ function exportCSV(){
                     </div>
                 `;
 
-               // html2canvas로 캡처 (기존 설정 유지)
+                // html2canvas로 캡처
                 const canvas = await html2canvas(tempContainer.firstElementChild, { scale: 2 });
                 const imgData = canvas.toDataURL('image/png');
 
-                // 📌 [핵심] 캡처된 실제 캔버스 가로폭의 절반 크기를 한글 전용 강제 규격으로 계산
+                // 캡처된 실제 캔버스 가로폭의 절반 크기를 한글 전용 강제 규격으로 계산
                 const targetWidth = Math.round(canvas.width / 2); 
-                // 예컨대 1000픽셀로 찍혔다면 500픽셀 크기로 워드 규격에 강제 고정시킵니다.
 
                 imagesHtml += `
                     <div style="page-break-before: always; clear: both; text-align: center; margin-top: 20px;">
                         <img src="${imgData}" width="${targetWidth}" style="width: ${targetWidth}px; max-width: 100%; height: auto;" />
                     </div>
                 `;
+            }
+        }
+    }
+
+    document.body.removeChild(tempContainer);
 
     if (!hasData) {
         return alert("저장되거나 배정된 결보강 데이터가 없습니다. 먼저 배정을 진행해 주세요.");
@@ -975,9 +977,10 @@ function exportCSV(){
     const blob = new Blob(["\uFEFF" + finalDocHtml], { type: 'application/vnd.ms-word;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `결보강현황_${targetDayStr}요일(수정불가_모양고정).doc`;
+    link.download = `결보강현황_${targetDayStr}요일(모양고정).doc`;
     link.click();
 }
+            
 function exportCurrentClassImage() {
     if(!currentGrade || !currentClass) {
         return alert("먼저 배정 탭에서 학급을 선택해 주세요.");
