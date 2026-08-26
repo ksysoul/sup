@@ -167,8 +167,8 @@ button.del-btn{background:var(--highlight)}
 <button class="action-btn" style="width:100%;margin-top:10px;background:#7f8c8d" onclick="if(confirm('데이터를 저장하고 요일 선택 화면으로 돌아갈까요?')) { saveCurrentData(); location.reload(); }">🔄 요일 선택/재시작</button>
 
 <button class="action-btn" style="width:100%;margin-top:10px" onclick="exportCSV()">엑셀 백업</button>
-    <button class="action-btn" style="width:100%;margin-top:10px;background:#8e44ad" onclick="exportHWPNotice()">📄 학급별 보강 안내장 추출</button>
-
+<button onclick="exportHWPNotice()" class="btn-sidebar">📝 HWP 추출 (수정 가능)</button>
+<button onclick="exportHWPImageNotice()" class="btn-sidebar">🖼️ HWP 추출 (수정 불가/모양 고정)</button>
 </div>
 
 </div>
@@ -739,11 +739,9 @@ function exportCSV(){
     a.download = "교사명단_백업.csv"; 
     a.click(); 
 }
-  function exportHWPNotice() {
-    // 1. 현재 입력된 데이터 동기화
+ function exportHWPNotice() {
     syncCurrentData();
 
-    // 2. 학급별로 순회하며 배정 데이터 추출 준비
     let classCounts = {};
     appData.teachers.forEach(t => {
         if(!isNaN(t.grade) && t.grade !== '') {
@@ -760,37 +758,18 @@ function exportCSV(){
             const classKey = `${grade}-${cls}`;
             const assigns = appData.assignRecords[classKey];
             
-            // 배정 기록이 있는 학급만 추출
             if(assigns && Object.keys(assigns).length > 0) {
                 hasData = true;
                 
-                // 해당 학급의 담임 교사 찾기
                 const homeroomTeacher = appData.teachers.find(t => t.grade === grade && t.class === String(cls));
                 const absentStart = homeroomTeacher ? appData.absentRecords[homeroomTeacher.id] : null;
                 const absentText = absentStart ? ` (결원: ${homeroomTeacher.name} 선생님)` : '';
-
-                // 📌 각 학급별 페이지 세트 (제목 + 날짜 + 표 + 안내상자)
-                pagesHtml += `
-                    <div class="page-container">
-                        <h2>[${targetDayStr}요일] 학급별 결보강 배정 현황 안내</h2>
-                        <div class="sub-title">출력일자: ${new Date().toLocaleDateString()}</div>
-                        
-                        <div class="class-header">📌 ${grade}학년 ${cls}반${absentText}</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 20%;">교시</th>
-                                    <th style="width: 30%;">시간</th>
-                                    <th style="width: 50%;">배정 선생님</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
 
                 let scheduleObj = appData.bellSchedule[grade] || {};
                 let maxP = appData.weeklyMax[grade]?.[targetDayStr] || 6;
                 let validPeriods = Object.keys(scheduleObj).map(p => ({name: p, start: scheduleObj[p].start})).sort((a,b) => a.start - b.start);
 
+                let rowsHtml = '';
                 validPeriods.forEach(p => {
                     if(PERIOD_MAP[p.name] > maxP && p.name !== '점심') return;
                     
@@ -807,25 +786,44 @@ function exportCSV(){
                         }
                     }
 
-                    pagesHtml += `
+                    rowsHtml += `
                         <tr>
-                            <td><b>${p.name}</b></td>
-                            <td>${timeStr}</td>
-                            <td><b>${teacherName}</b></td>
+                            <td style="border: 1px solid #BDC3C7; padding: 6px 10px; font-size: 13px; text-align: center;"><b>${p.name}</b></td>
+                            <td style="border: 1px solid #BDC3C7; padding: 6px 10px; font-size: 13px; text-align: center;">${timeStr}</td>
+                            <td style="border: 1px solid #BDC3C7; padding: 6px 10px; font-size: 13px; text-align: center;"><b>${teacherName}</b></td>
                         </tr>
                     `;
                 });
 
+                // HWP/Word 내부 구역 강제 분할을 위한 전용 섹션 감싸기
                 pagesHtml += `
+                    <div class="page-section">
+                        <h2 style="text-align: center; color: #2C3E50; margin-bottom: 5px; font-size: 20px;">[${targetDayStr}요일] 학급별 결보강 배정 현황 안내</h2>
+                        <div style="text-align: center; font-size: 13px; color: #666; margin-bottom: 20px;">출력일자: ${new Date().toLocaleDateString()}</div>
+                        
+                        <div style="font-size: 16px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; border-bottom: 2px solid #3498DB; padding-bottom: 5px;">📌 ${grade}학년 ${cls}반${absentText}</div>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 5px; background: white;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%; border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; background: #2C3E50; color: white;">교시</th>
+                                    <th style="width: 30%; border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; background: #2C3E50; color: white;">시간</th>
+                                    <th style="width: 50%; border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; background: #2C3E50; color: white;">배정 선생님</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
                             </tbody>
                         </table>
-                        <div class="footer-box">
+
+                        <div style="margin-top: 15px; border: 2px solid #2C3E50; background: #fcfcfc; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.5; color: #2C3E50;">
                             위와 같이 당일 결보강 수업을 운영하오니 해당 학급 및 교사께서는 수업에 차질 없으시기 바랍니다.<br>
                             바쁘실텐데 시간 내주셔서 진심으로 감사드립니다~~!<br>
                             학년 선생님들께서도 잘 챙겨주시기 바랍니다^^ 오늘도 좋은 하루 되세요!<br>
                             <b>(마지막 시간에는 컴퓨터 전원과 문단속도 부탁드립니다.)</b>
                         </div>
                     </div>
+                    <br style="page-break-before: always; clear: both; mso-break-type: section-break;" />
                 `;
             }
         }
@@ -835,47 +833,13 @@ function exportCSV(){
         return alert("저장되거나 배정된 결보강 데이터가 없습니다. 먼저 배정을 진행해 주세요.");
     }
 
-    // 3. 전체 문서 구조 및 스타일 정의 (페이지 강제 분할 적용)
     let htmlContent = `
-        <html lang="ko">
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40' lang="ko">
         <head>
             <meta charset="UTF-8">
             <style>
-                body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; color: #333; }
-                
-                /* 학급당 한 면씩 정확히 분리되도록 설정하는 컨테이너 */
-                .page-container { 
-                    page-break-before: always; 
-                    break-before: page;
-                    mso-break-type: section-break;
-                    padding-bottom: 30px;
-                }
-                
-                /* 첫 번째 학급은 첫 페이지 상단에 바로 오도록 설정 */
-                .page-container:first-of-type {
-                    page-break-before: avoid;
-                    break-before: avoid;
-                }
-
-                h2 { text-align: center; color: #2C3E50; margin-bottom: 5px; }
-                .sub-title { text-align: center; font-size: 14px; color: #666; margin-bottom: 25px; }
-                .class-header { font-size: 16px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; border-bottom: 2px solid #3498DB; padding-bottom: 5px; }
-                
-                table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; }
-                th, td { border: 1px solid #BDC3C7; padding: 8px 12px; font-size: 13px; text-align: center; }
-                th { background: #2C3E50; color: white; }
-                
-                /* 큰 네모 박스 스타일 */
-                .footer-box {
-                    margin-top: 15px;
-                    border: 2px solid #2C3E50;
-                    background: #fcfcfc;
-                    padding: 15px;
-                    border-radius: 6px;
-                    font-size: 13px;
-                    line-height: 1.6;
-                    color: #2C3E50;
-                }
+                body { font-family: 'Malgun Gothic', sans-serif; margin: 15px; color: #333; }
+                .page-section { page-break-inside: avoid; }
             </style>
         </head>
         <body>
@@ -884,11 +848,132 @@ function exportCSV(){
         </html>
     `;
 
-    // 4. 파일 생성 및 다운로드 실행
     const blob = new Blob(["\uFEFF" + htmlContent], { type: 'application/vnd.ms-word;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `결보강현황_${targetDayStr}요일.doc`;
+    link.download = `결보강현황_${targetDayStr}요일(수정가능).doc`;
+    link.click();
+}
+    async function exportHWPImageNotice() {
+    syncCurrentData();
+
+    // 임시로 캡처용 렌더링 영역 생성
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '700px'; // A4 가로폭에 최적화
+    document.body.appendChild(tempContainer);
+
+    let classCounts = {};
+    appData.teachers.forEach(t => {
+        if(!isNaN(t.grade) && t.grade !== '') {
+            let c = parseInt(t.class) || 0;
+            if(!classCounts[t.grade] || c > classCounts[t.grade]) classCounts[t.grade] = c;
+        }
+    });
+
+    let imagesHtml = '';
+    let hasData = false;
+
+    for (const grade of Object.keys(classCounts).sort()) {
+        for (let cls = 1; cls <= classCounts[grade]; cls++) {
+            const classKey = `${grade}-${cls}`;
+            const assigns = appData.assignRecords[classKey];
+
+            if (assigns && Object.keys(assigns).length > 0) {
+                hasData = true;
+
+                const homeroomTeacher = appData.teachers.find(t => t.grade === grade && t.class === String(cls));
+                const absentStart = homeroomTeacher ? appData.absentRecords[homeroomTeacher.id] : null;
+                const absentText = absentStart ? ` (결원: ${homeroomTeacher.name} 선생님)` : '';
+
+                let scheduleObj = appData.bellSchedule[grade] || {};
+                let maxP = appData.weeklyMax[grade]?.[targetDayStr] || 6;
+                let validPeriods = Object.keys(scheduleObj).map(p => ({name: p, start: scheduleObj[p].start})).sort((a,b) => a.start - b.start);
+
+                let rowsHtml = '';
+                validPeriods.forEach(p => {
+                    if (PERIOD_MAP[p.name] > maxP && p.name !== '점심') return;
+
+                    const timeStr = `${minsToTime(scheduleObj[p.name].start)} ~ ${minsToTime(scheduleObj[p.name].end)}`;
+                    const assignedId = assigns[p.name];
+                    let teacherName = "배정 대기";
+
+                    if (assignedId) {
+                        if (assignedId.includes('(정상)')) {
+                            teacherName = assignedId;
+                        } else {
+                            const tObj = appData.teachers.find(t => t.id === assignedId);
+                            if (tObj) teacherName = `${tObj.name} 선생님`;
+                        }
+                    }
+
+                    rowsHtml += `
+                        <tr>
+                            <td style="border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; text-align: center;"><b>${p.name}</b></td>
+                            <td style="border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; text-align: center;">${timeStr}</td>
+                            <td style="border: 1px solid #BDC3C7; padding: 8px; font-size: 13px; text-align: center;"><b>${teacherName}</b></td>
+                        </tr>
+                    `;
+                });
+
+                // HTML 요소를 만들어 임시 컨테이너에 삽입
+                tempContainer.innerHTML = `
+                    <div style="background: white; padding: 25px; border: 1px solid #ddd; font-family: 'Malgun Gothic', sans-serif;">
+                        <h2 style="text-align: center; color: #2C3E50; margin-bottom: 5px; font-size: 22px;">[${targetDayStr}요일] 학급별 결보강 배정 현황 안내</h2>
+                        <div style="text-align: center; font-size: 13px; color: #666; margin-bottom: 25px;">출력일자: ${new Date().toLocaleDateString()}</div>
+                        <div style="font-size: 17px; font-weight: bold; color: #2C3E50; margin-bottom: 12px; border-bottom: 2px solid #3498DB; padding-bottom: 6px;">📌 ${grade}학년 ${cls}반${absentText}</div>
+                        <table style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%; border: 1px solid #BDC3C7; padding: 10px; font-size: 14px; background: #2C3E50; color: white;">교시</th>
+                                    <th style="width: 30%; border: 1px solid #BDC3C7; padding: 10px; font-size: 14px; background: #2C3E50; color: white;">시간</th>
+                                    <th style="width: 50%; border: 1px solid #BDC3C7; padding: 10px; font-size: 14px; background: #2C3E50; color: white;">배정 선생님</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                        <div style="margin-top: 20px; border: 2px solid #2C3E50; background: #fcfcfc; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; color: #2C3E50;">
+                            위와 같이 당일 결보강 수업을 운영하오니 해당 학급 및 교사께서는 수업에 차질 없으시기 바랍니다.<br>
+                            바쁘실텐데 시간 내주셔서 진심으로 감사드립니다~~!<br>
+                            학년 선생님들께서도 잘 챙겨주시기 바랍니다^^ 오늘도 좋은 하루 되세요!<br>
+                            <b>(마지막 시간에는 컴퓨터 전원과 문단속도 부탁드립니다.)</b>
+                        </div>
+                    </div>
+                `;
+
+                // html2canvas 이용해 고해상도 이미지 변환
+                const canvas = await html2canvas(tempContainer.firstElementChild, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+
+                imagesHtml += `
+                    <div style="page-break-before: always; clear: both; text-align: center;">
+                        <img src="${imgData}" style="width: 100%; max-width: 680px; height: auto;" />
+                    </div>
+                `;
+            }
+        }
+    }
+
+    document.body.removeChild(tempContainer);
+
+    if (!hasData) {
+        return alert("저장되거나 배정된 결보강 데이터가 없습니다. 먼저 배정을 진행해 주세요.");
+    }
+
+    let finalDocHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40' lang="ko">
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0;">
+            ${imagesHtml}
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob(["\uFEFF" + finalDocHtml], { type: 'application/vnd.ms-word;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `결보강현황_${targetDayStr}요일(수정불가_모양고정).doc`;
     link.click();
 }
 function exportCurrentClassImage() {
