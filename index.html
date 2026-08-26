@@ -951,7 +951,13 @@ function exportCSV(){
 
                imagesHtml += `
                     <div style="page-break-before: always; clear: both; text-align: center; margin-top: 10px;">
-                        <img src="${imgData}" style="width: 480px; height: auto; border: 1px solid #ddd;" />
+                        <table align="center" style="width: 480px; border-collapse: collapse; border: none;">
+                            <tr>
+                                <td style="border: none; padding: 0; text-align: center;">
+                                    <img src="${imgData}" style="width: 480px; max-width: 480px; height: auto;" />
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                 `;
             }
