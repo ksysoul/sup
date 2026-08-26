@@ -167,6 +167,7 @@ button.del-btn{background:var(--highlight)}
 <button class="action-btn" style="width:100%;margin-top:10px;background:#7f8c8d" onclick="if(confirm('데이터를 저장하고 요일 선택 화면으로 돌아갈까요?')) { saveCurrentData(); location.reload(); }">🔄 요일 선택/재시작</button>
 
 <button class="action-btn" style="width:100%;margin-top:10px" onclick="exportCSV()">엑셀 백업</button>
+    <button class="action-btn" style="width:100%;margin-top:10px;background:#8e44ad" onclick="exportHWPNotice()">📄 학급별 보강 안내장 추출</button>
 
 </div>
 
@@ -730,6 +731,127 @@ function exportCSV(){
     a.href = URL.createObjectURL(new Blob([BOM + csv], {type:'text/csv;charset=utf-8;'})); 
     a.download = "교사명단_백업.csv"; 
     a.click(); 
+}
+    function exportHWPNotice() {
+    // 1. 현재 입력된 데이터 동기화
+    syncCurrentData();
+
+    let htmlContent = `
+        <html lang="ko">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; color: #333; }
+                h2 { text-align: center; color: #2C3E50; margin-bottom: 5px; }
+                .sub-title { text-align: center; font-size: 14px; color: #666; margin-bottom: 30px; }
+                .class-box { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background: #fafafa; }
+                .class-header { font-size: 16px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; border-bottom: 2px solid #3498DB; padding-bottom: 5px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; }
+                th, td { border: 1px solid #BDC3C7; padding: 8px 12px; font-size: 13px; text-align: center; }
+                th { background: #2C3E50; color: white; }
+                .footer-msg { margin-top: 40px; font-size: 14px; line-height: 1.6; }
+            </style>
+        </head>
+        <body>
+            <h2>[${targetDayStr}요일] 학급별 결보강 배정 현황 안내</h2>
+            <div class="sub-title">출력일자: ${new Date().toLocaleDateString()}</div>
+    `;
+
+    let hasData = false;
+
+    // 2. 학급별로 순회하며 배정 데이터 추출
+    let classCounts = {};
+    appData.teachers.forEach(t => {
+        if(!isNaN(t.grade) && t.grade !== '') {
+            let c = parseInt(t.class) || 0;
+            if(!classCounts[t.grade] || c > classCounts[t.grade]) classCounts[t.grade] = c;
+        }
+    });
+
+    Object.keys(classCounts).sort().forEach(grade => {
+        for(let cls = 1; cls <= classCounts[grade]; cls++) {
+            const classKey = `${grade}-${cls}`;
+            const assigns = appData.assignRecords[classKey];
+            
+            // 배정 기록이 있는 학급만 추출
+            if(assigns && Object.keys(assigns).length > 0) {
+                hasData = true;
+                
+                // 해당 학급의 담임 교사 찾기
+                const homeroomTeacher = appData.teachers.find(t => t.grade === grade && t.class === String(cls));
+                const absentStart = homeroomTeacher ? appData.absentRecords[homeroomTeacher.id] : null;
+                const absentText = absentStart ? ` (결원: ${homeroomTeacher.name} 선생님)` : '';
+
+                htmlContent += `
+                    <div class="class-box">
+                        <div class="class-header">📌 ${grade}학년 ${cls}반${absentText}</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">교시</th>
+                                    <th style="width: 30%;">시간</th>
+                                    <th style="width: 50%;">배정 선생님</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                let scheduleObj = appData.bellSchedule[grade] || {};
+                let maxP = appData.weeklyMax[grade]?.[targetDayStr] || 6;
+                let validPeriods = Object.keys(scheduleObj).map(p => ({name: p, start: scheduleObj[p].start})).sort((a,b) => a.start - b.start);
+
+                validPeriods.forEach(p => {
+                    if(PERIOD_MAP[p.name] > maxP && p.name !== '점심') return;
+                    
+                    const timeStr = `${minsToTime(scheduleObj[p.name].start)} ~ ${minsToTime(scheduleObj[p.name].end)}`;
+                    const assignedId = assigns[p.name];
+                    let teacherName = "배정 대기";
+                    
+                    if(assignedId) {
+                        if(assignedId.includes('(정상)')) {
+                            teacherName = assignedId;
+                        } else {
+                            const tObj = appData.teachers.find(t => t.id === assignedId);
+                            if(tObj) teacherName = `${tObj.name} 선생님`;
+                        }
+                    }
+
+                    htmlContent += `
+                        <tr>
+                            <td><b>${p.name}</b></td>
+                            <td>${timeStr}</td>
+                            <td><b>${teacherName}</b></td>
+                        </tr>
+                    `;
+                });
+
+                htmlContent += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+    });
+
+    if(!hasData) {
+        return alert("저장되거나 배정된 결보강 데이터가 없습니다. 먼저 배정을 진행해 주세요.");
+    }
+
+    htmlContent += `
+            <div class="footer-msg">
+                위와 같이 당일 결보강 수업을 운영하오니 해당 학급 및 교사께서는 수업에 차질 없으시기 바랍니다.
+            </div>
+        </body>
+        </html>
+    `;
+
+    // 3. 한글(HWP) 프로그램에서 완벽하게 호환되도록 파일 생성 및 다운로드
+    const blob = new Blob(["\uFEFF" + htmlContent], { type: 'application/vnd.ms-word;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `결보강현황_${targetDayStr}요일.doc`; // 확장자를 .doc로 지정하면 한글에서 표 서식이 그대로 완벽히 열립니다.
+    link.click();
 }
 
 </script>
