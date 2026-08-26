@@ -949,9 +949,9 @@ function exportCSV(){
                 const canvas = await html2canvas(tempContainer.firstElementChild, { scale: 2 });
                 const imgData = canvas.toDataURL('image/png');
 
-                imagesHtml += `
-                    <div style="page-break-before: always; clear: both; text-align: center;">
-                        <img src="${imgData}" style="width: 100%; max-width: 680px; height: auto;" />
+               imagesHtml += `
+                    <div style="page-break-before: always; clear: both; text-align: center; margin-top: 20px;">
+                        <img src="${imgData}" style="width: 75%; max-width: 520px; height: auto; border: 1px solid #ccc;" />
                     </div>
                 `;
             }
