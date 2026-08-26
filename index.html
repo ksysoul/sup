@@ -752,32 +752,32 @@ function exportCSV(){
                 h2 { text-align: center; color: #2C3E50; margin-bottom: 5px; }
                 .sub-title { text-align: center; font-size: 14px; color: #666; margin-bottom: 30px; }
                 
-                /* 각 학급 박스가 한 화면(페이지)을 온전히 차지하도록 설정 */
+                /* 한글/워드(MS Word) 엔진에서 확실하게 페이지가 갈리도록 강제하는 스타일 */
                 .class-box { 
                     margin-bottom: 30px; 
                     border: 1px solid #ddd; 
-                    padding: 15px; 
+                    padding: 20px; 
                     border-radius: 5px; 
                     background: #fafafa; 
-                    /* 핵심: 첫 번째 학급을 제외하고는 무조건 다음 페이지(화면)에서 시작하도록 설정 */
                     page-break-before: always; 
                     break-before: page;
+                    mso-break-type: section-break;
                 }
                 
-                /* 첫 번째 학급은 첫 페이지 상단에 바로 오도록 예외 처리 */
+                /* 첫 번째 학급은 첫 페이지에 바로 오도록 설정 */
                 .class-box:first-of-type {
                     page-break-before: avoid;
                     break-before: avoid;
                 }
 
-                .class-header { font-size: 16px; font-weight: bold; color: #2C3E50; margin-bottom: 10px; border-bottom: 2px solid #3498DB; padding-bottom: 5px; }
+                .class-header { font-size: 18px; font-weight: bold; color: #2C3E50; margin-bottom: 12px; border-bottom: 2px solid #3498DB; padding-bottom: 8px; }
                 table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; }
-                th, td { border: 1px solid #BDC3C7; padding: 8px 12px; font-size: 13px; text-align: center; }
+                th, td { border: 1px solid #BDC3C7; padding: 10px 12px; font-size: 14px; text-align: center; }
                 th { background: #2C3E50; color: white; }
                 
-                /* 큰 네모 박스(안내 및 당부 말씀) 스타일 */
+                /* 큰 네모 박스 스타일 */
                 .footer-box {
-                    margin-top: 15px;
+                    margin-top: 20px;
                     border: 2px solid #2C3E50;
                     background: #fcfcfc;
                     padding: 15px;
