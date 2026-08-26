@@ -167,8 +167,11 @@ button.del-btn{background:var(--highlight)}
 <button class="action-btn" style="width:100%;margin-top:10px;background:#7f8c8d" onclick="if(confirm('데이터를 저장하고 요일 선택 화면으로 돌아갈까요?')) { saveCurrentData(); location.reload(); }">🔄 요일 선택/재시작</button>
 
 <button class="action-btn" style="width:100%;margin-top:10px" onclick="exportCSV()">엑셀 백업</button>
-<button onclick="exportHWPNotice()" class="btn-sidebar">📝 HWP 추출 (수정 가능)</button>
-<button onclick="exportHWPImageNotice()" class="btn-sidebar">🖼️ HWP 추출 (수정 불가/모양 고정)</button>
+
+<!-- 👇 아래와 같이 기존 버튼들과 똑같은 class="action-btn" 스타일을 적용해야 보입니다! -->
+<button class="action-btn" style="width:100%;margin-top:10px;background:#27ae60" onclick="exportHWPNotice()">📝 HWP 추출 (수정 가능)</button>
+<button class="action-btn" style="width:100%;margin-top:10px;background:#2980b9" onclick="exportHWPImageNotice()">🖼️ HWP 추출 (모양 고정)</button>
+
 </div>
 
 </div>
