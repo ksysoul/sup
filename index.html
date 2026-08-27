@@ -579,7 +579,11 @@ function runAutoAssign(){
             sel.innerHTML = `<option value="${targetTeacher.name}(정상)">${targetTeacher.name} (정상)</option>`; 
             return; 
         }
-
+const classKey = `${currentGrade}-${currentClass}`;
+        const currentAssign = appData.assignRecords?.[classKey]?.[period.name];
+        if (currentAssign && currentAssign.includes('(정상)')) {
+            return; // 이 교시는 보강을 채우지 않고 그대로 둡니다!
+        }
         sel.innerHTML = ''; 
         let targetTime = scheduleObj[period.name]; 
         let tier1=[], tier2=[], tier3=[], tier4=[];
