@@ -580,12 +580,25 @@ function runAutoAssign(){
             return; 
         }
 const classKey = `${currentGrade}-${currentClass}`;
-    const classSpecMap = appData.specSchedule[targetDayStr]?.[classKey] || {};
-    const jeondamTeacherName = classSpecMap[period.name];
     
-    if (jeondamTeacherName && jeondamTeacherName !== '-') {
-        const jeondamTeacherObj = appData.teachers.find(t => t.name === jeondamTeacherName && t.role === '전담');
-        if (jeondamTeacherObj && !appData.absentRecords[jeondamTeacherObj.id]) {
+    // 교사 중심 시간표에서 현재 학급과 교시를 담당하는 전담 교사 역으로 찾기
+    let jeondamTeacherObj = null;
+    const dayPeriodKey = targetDayStr + period.name; // 예: "월1", "화3" 등
+
+    if (appData.specSchedule && appData.specSchedule[targetDayStr]) {
+        const daySpec = appData.specSchedule[targetDayStr];
+        for (const teacherName in daySpec) {
+            const teacherRow = daySpec[teacherName];
+            if (teacherRow && (teacherRow[dayPeriodKey] === classKey || teacherRow[period.name] === classKey)) {
+                jeondamTeacherObj = appData.teachers.find(t => t.name === teacherName && t.role === '전담');
+                if (jeondamTeacherObj) break;
+            }
+        }
+    }
+
+    // 전담 교사가 존재하고 오늘 출근 상태라면 최우선 선배정
+    if (jeondamTeacherObj) {
+        if (!appData.absentRecords[jeondamTeacherObj.id]) {
             sel.innerHTML = `<option value="${jeondamTeacherObj.id}" selected>${jeondamTeacherObj.name} (전담)</option>`;
             if (!appData.assignRecords[classKey]) appData.assignRecords[classKey] = {};
             appData.assignRecords[classKey][period.name] = jeondamTeacherObj.id;
