@@ -580,6 +580,18 @@ function runAutoAssign(){
             return; 
         }
 const classKey = `${currentGrade}-${currentClass}`;
+    const classSpecMap = appData.specSchedule[targetDayStr]?.[classKey] || {};
+    const jeondamTeacherName = classSpecMap[period.name];
+    
+    if (jeondamTeacherName && jeondamTeacherName !== '-') {
+        const jeondamTeacherObj = appData.teachers.find(t => t.name === jeondamTeacherName && t.role === '전담');
+        if (jeondamTeacherObj && !appData.absentRecords[jeondamTeacherObj.id]) {
+            sel.innerHTML = `<option value="${jeondamTeacherObj.id}" selected>${jeondamTeacherObj.name} (전담)</option>`;
+            if (!appData.assignRecords[classKey]) appData.assignRecords[classKey] = {};
+            appData.assignRecords[classKey][period.name] = jeondamTeacherObj.id;
+            return; // 전담 시간이라 여기서 끝내고 다음 교시로 넘어감
+        }
+    }
         const currentAssign = appData.assignRecords?.[classKey]?.[period.name];
         if (currentAssign && currentAssign.includes('(정상)')) {
             return; // 이 교시는 보강을 채우지 않고 그대로 둡니다!
